@@ -900,6 +900,7 @@ function resetProgress(){
 
 // ── FIREBASE LIVE SYNC ────────────────────────────────────────────
 window._applyFirebaseSessions = function(sessions) {
+  _allSessions = sessions; // store globally for salary report
   // Reset progress that came from Firebase (keep localStorage manual edits too)
   // Strategy: Firebase sessions ADD periods; manual edits in tracker also count
   // We store firebase-derived progress separately then merge
@@ -960,10 +961,131 @@ window._showSalaryReport = function(sessions) {
 };
 
 
+// ── SALARY REPORT ─────────────────────────────────────────────────
+let _allSessions = [];
+
 function openSalaryReport() {
   document.getElementById('salary-modal').style.display = 'block';
-  const el = document.getElementById('salary-content');
-  el.innerHTML = '<p style="color:#6b7280">Salary data loads from Firebase. Make sure Firebase is connected.</p><p style="margin-top:8px;color:#6b7280;font-size:12px">To see salary data, open browser console and run: console.table(window._showSalaryReport(window._lastSessions || []))</p>';
+  // Set default date range: first of current month to today
+  const today = new Date();
+  const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  document.getElementById('sal-from').value = firstOfMonth.toISOString().slice(0,10);
+  document.getElementById('sal-to').value = today.toISOString().slice(0,10);
+  
+  // Populate faculty dropdown
+  const faculties = [...new Set(_allSessions.map(s => s.faculty).filter(Boolean))].sort();
+  const sel = document.getElementById('sal-faculty');
+  sel.innerHTML = '<option value="">All Faculty</option>';
+  faculties.forEach(f => { const o = document.createElement('option'); o.value=f; o.textContent=f; sel.appendChild(o); });
+  
+  buildSalaryReport();
+}
+
+function closeSalaryModal() {
+  document.getElementById('salary-modal').style.display = 'none';
+}
+
+function clearSalaryFilters() {
+  document.getElementById('sal-from').value = '';
+  document.getElementById('sal-to').value = '';
+  document.getElementById('sal-faculty').value = '';
+  buildSalaryReport();
+}
+
+function getFilteredSessions() {
+  const from = document.getElementById('sal-from').value;
+  const to = document.getElementById('sal-to').value;
+  const faculty = document.getElementById('sal-faculty').value;
+  return _allSessions.filter(s => {
+    if (from && s.date < from) return false;
+    if (to && s.date > to) return false;
+    if (faculty && s.faculty !== faculty) return false;
+    return true;
+  });
+}
+
+function buildSalaryReport() {
+  const sessions = getFilteredSessions();
+  const from = document.getElementById('sal-from').value;
+  const to = document.getElementById('sal-to').value;
+  
+  // Update period label
+  const label = from && to ? `${from} to ${to}` : from ? `From ${from}` : to ? `Until ${to}` : 'All sessions';
+  document.getElementById('salary-period-label').textContent = label + ` · ${sessions.length} sessions`;
+
+  if (!sessions.length) {
+    document.getElementById('salary-content').innerHTML = '<div style="text-align:center;padding:2rem;color:#9ca3af">No sessions found for the selected filters.</div>';
+    document.getElementById('salary-summary').innerHTML = '';
+    return;
+  }
+
+  // Group by faculty
+  const byFaculty = {};
+  sessions.forEach(s => {
+    const f = s.faculty || 'Unknown';
+    if (!byFaculty[f]) byFaculty[f] = { name:f, totalHours:0, sessions:0, byBatch:{} };
+    byFaculty[f].totalHours += parseFloat(s.hours) || 0;
+    byFaculty[f].sessions++;
+    const batch = s.batch || 'Unknown';
+    if (!byFaculty[f].byBatch[batch]) byFaculty[f].byBatch[batch] = 0;
+    byFaculty[f].byBatch[batch] += parseFloat(s.hours) || 0;
+  });
+
+  // Summary cards
+  const totalHours = Object.values(byFaculty).reduce((a,f) => a+f.totalHours, 0);
+  const totalSessions = sessions.length;
+  const facCount = Object.keys(byFaculty).length;
+  document.getElementById('salary-summary').innerHTML = `
+    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:0.875rem 1rem">
+      <div style="font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px">Total hours</div>
+      <div style="font-size:24px;font-weight:700;color:#1e1e1e">${totalHours.toFixed(1)}</div>
+    </div>
+    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:0.875rem 1rem">
+      <div style="font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px">Total sessions</div>
+      <div style="font-size:24px;font-weight:700;color:#1e1e1e">${totalSessions}</div>
+    </div>
+    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:0.875rem 1rem">
+      <div style="font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px">Faculty active</div>
+      <div style="font-size:24px;font-weight:700;color:#1e1e1e">${facCount}</div>
+    </div>`;
+
+  // Table
+  const rows = Object.values(byFaculty).sort((a,b) => b.totalHours - a.totalHours).map(f => {
+    const batchBreakdown = Object.entries(f.byBatch).map(([b,h]) => `<span style="display:inline-block;padding:2px 8px;background:#EBF3FD;border-radius:999px;font-size:11px;color:#1a5fc4;margin:2px">${b}: ${h.toFixed(1)}h</span>`).join('');
+    return `<tr style="border-bottom:1px solid #f3f4f6">
+      <td style="padding:10px 12px;font-weight:600;color:#1e1e1e">${f.name}</td>
+      <td style="padding:10px 12px;text-align:center;font-weight:700;color:#2B7FE0;font-size:16px">${f.totalHours.toFixed(1)}</td>
+      <td style="padding:10px 12px;text-align:center;color:#6b7280">${f.sessions}</td>
+      <td style="padding:10px 12px">${batchBreakdown}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('salary-content').innerHTML = `
+    <table style="width:100%;border-collapse:collapse">
+      <thead>
+        <tr style="background:#f8f9fb;border-bottom:2px solid #e5e7eb">
+          <th style="padding:10px 12px;text-align:left;font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em">Faculty</th>
+          <th style="padding:10px 12px;text-align:center;font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em">Total Hours</th>
+          <th style="padding:10px 12px;text-align:center;font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em">Sessions</th>
+          <th style="padding:10px 12px;text-align:left;font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em">Breakdown by batch</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+function exportSalaryCSV() {
+  const sessions = getFilteredSessions();
+  const rows = [['Date','Faculty','Batch','Batch Type','Session','Hours','Subject','Chapter','Periods','Status','Description']];
+  sessions.forEach(s => {
+    rows.push([s.date||'',s.faculty||'',s.batch||'',s.batchType||'',s.session||'',s.hours||'',s.subject||'',s.chapter||'',s.periods||'',s.chapterStatus||'','"'+(s.description||'').replace(/"/g,"''")+'"']);
+  });
+  const csv = rows.map(r => r.join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'josh-salary-report-'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
 }
 
 function checkRoute(){
@@ -976,15 +1098,53 @@ loadAll();renderDash();checkRoute();
 </script>
 
 <!-- Salary Report Modal -->
-<div id="salary-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;overflow-y:auto;padding:2rem 1rem">
-  <div style="background:#fff;border-radius:14px;max-width:640px;margin:0 auto;padding:1.75rem;box-shadow:0 20px 60px rgba(0,0,0,0.2)">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem">
-      <h2 style="font-size:17px;font-weight:700;color:#1e1e1e">💰 Salary Hours Report</h2>
-      <button onclick="document.getElementById('salary-modal').style.display='none'" style="border:none;background:none;font-size:20px;cursor:pointer;color:#6b7280">✕</button>
+<div id="salary-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:200;overflow-y:auto;padding:2rem 1rem">
+  <div style="background:#fff;border-radius:14px;max-width:780px;margin:0 auto;padding:0;box-shadow:0 20px 60px rgba(0,0,0,0.25);overflow:hidden">
+    
+    <!-- Modal Header -->
+    <div style="background:linear-gradient(135deg,#1a5fc4,#2B7FE0);padding:1.25rem 1.5rem;display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-size:17px;font-weight:700;color:#fff">💰 Salary Hours Report</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.75);margin-top:2px" id="salary-period-label">All sessions</div>
+      </div>
+      <button onclick="closeSalaryModal()" style="border:none;background:rgba(255,255,255,0.2);color:#fff;width:32px;height:32px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
     </div>
-    <div id="salary-content" style="font-size:14px;color:#4a4a4a">Loading…</div>
-    <div style="margin-top:1.25rem;padding-top:1rem;border-top:1px solid #e5e7eb">
-      <button onclick="document.getElementById('salary-modal').style.display='none'" style="padding:8px 20px;border-radius:8px;border:1px solid #d1d5db;background:#f9fafb;cursor:pointer;font-size:13px;font-weight:600">Close</button>
+
+    <!-- Filters -->
+    <div style="padding:1rem 1.5rem;background:#f8f9fb;border-bottom:1px solid #e5e7eb;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <div style="display:flex;flex-direction:column;gap:3px">
+        <label style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em">From</label>
+        <input type="date" id="sal-from" onchange="buildSalaryReport()" style="font-size:13px;padding:6px 10px;border:1.5px solid #d1d5db;border-radius:7px;background:#fff;color:#1e1e1e;font-family:inherit">
+      </div>
+      <div style="display:flex;flex-direction:column;gap:3px">
+        <label style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em">To</label>
+        <input type="date" id="sal-to" onchange="buildSalaryReport()" style="font-size:13px;padding:6px 10px;border:1.5px solid #d1d5db;border-radius:7px;background:#fff;color:#1e1e1e;font-family:inherit">
+      </div>
+      <div style="display:flex;flex-direction:column;gap:3px">
+        <label style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em">Faculty</label>
+        <select id="sal-faculty" onchange="buildSalaryReport()" style="font-size:13px;padding:6px 10px;border:1.5px solid #d1d5db;border-radius:7px;background:#fff;color:#1e1e1e;font-family:inherit;min-width:140px">
+          <option value="">All Faculty</option>
+        </select>
+      </div>
+      <div style="margin-left:auto;display:flex;gap:8px;align-items:flex-end">
+        <button onclick="clearSalaryFilters()" style="padding:7px 14px;border-radius:7px;border:1.5px solid #d1d5db;background:#fff;font-size:12px;font-weight:600;cursor:pointer;color:#6b7280;font-family:inherit">Clear</button>
+        <button onclick="exportSalaryCSV()" style="padding:7px 14px;border-radius:7px;border:none;background:#2B7FE0;font-size:12px;font-weight:600;cursor:pointer;color:#fff;font-family:inherit">Export CSV</button>
+      </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div id="salary-summary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;padding:1rem 1.5rem;background:#f8f9fb;border-bottom:1px solid #e5e7eb"></div>
+
+    <!-- Table -->
+    <div style="padding:1.25rem 1.5rem;overflow-x:auto">
+      <div id="salary-content" style="font-size:14px;color:#4a4a4a">
+        <div style="text-align:center;padding:2rem;color:#9ca3af">Loading salary data from Firebase…</div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div style="padding:1rem 1.5rem;border-top:1px solid #e5e7eb;display:flex;justify-content:flex-end">
+      <button onclick="closeSalaryModal()" style="padding:8px 22px;border-radius:8px;border:1.5px solid #d1d5db;background:#f9fafb;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;color:#4a4a4a">Close</button>
     </div>
   </div>
 </div>
