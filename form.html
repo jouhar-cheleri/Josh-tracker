@@ -275,17 +275,6 @@ textarea{resize:vertical;min-height:96px;line-height:1.55}
       </div>
 
       <div class="field">
-        <label>Periods conducted this session <span class="req">*</span></label>
-        <div class="pill-group">
-          <label class="pill" onclick="selectPillGroup('periods',this)"><input type="radio" name="periods" value="1">1</label>
-          <label class="pill" onclick="selectPillGroup('periods',this)"><input type="radio" name="periods" value="2">2</label>
-          <label class="pill" onclick="selectPillGroup('periods',this)"><input type="radio" name="periods" value="3">3</label>
-          <label class="pill" onclick="selectPillGroup('periods',this)"><input type="radio" name="periods" value="4">4</label>
-        </div>
-        <div class="err-msg" id="err-periods">Please select number of periods</div>
-      </div>
-
-      <div class="field">
         <label>Chapter status after this session <span class="req">*</span></label>
         <div class="status-grid">
           <div class="status-card" id="sc-progress" onclick="selectStatus('in_progress')">
@@ -454,7 +443,6 @@ function selectPillGroup(name, label) {
   const radio = label.querySelector('input');
   if (radio) radio.checked = true;
   if (name === 'session') clearErr(null,'err-session');
-  if (name === 'periods') clearErr(null,'err-periods');
 }
 
 function selectHour(val, card) {
@@ -501,8 +489,6 @@ function validateAll() {
     else clearErr('f-subject','err-subject');
     if (!document.getElementById('f-chapter').value) { showErr('f-chapter','err-chapter'); ok=false; }
     else clearErr('f-chapter','err-chapter');
-    if (!document.querySelector('input[name="periods"]:checked')) { showErr(null,'err-periods'); ok=false; }
-    else clearErr(null,'err-periods');
     if (!selStatus) { showErr(null,'err-status'); ok=false; }
     else clearErr(null,'err-status');
   }
@@ -561,8 +547,6 @@ async function handleSubmit() {
   const date    = document.getElementById('f-date').value;
   const batch   = document.getElementById('f-batch').value;
   const session = document.querySelector('input[name="session"]:checked').value;
-  const periods = isFoundation ? null : parseInt(document.querySelector('input[name="periods"]:checked')?.value);
-
   const data = {
     date, batch, session,
     faculty: document.getElementById('f-name').value,
@@ -570,7 +554,6 @@ async function handleSubmit() {
     hours: parseFloat(selHours),
     subject: document.getElementById('f-subject').value || '',
     chapter: isFoundation ? null : document.getElementById('f-chapter').value,
-    periods,
     chapterStatus: isFoundation ? null : selStatus,
     description: document.getElementById('f-desc').value.trim(),
     submittedAt: null
@@ -620,7 +603,7 @@ function showSuccess(data) {
   document.getElementById('suc-detail').innerHTML = `
     📅 Date: ${data.date}<br>
     🏫 Batch: ${data.batch} &nbsp;|&nbsp; ${data.session}<br>
-    ⏱ Hours: ${data.hours}${!isF ? `<br>📖 ${data.subject} — ${data.chapter}<br>📊 ${data.periods} period(s) · ${data.chapterStatus === 'completed' ? '✅ Completed' : '📖 In Progress'}` : ''}`;
+    ⏱ Hours: ${data.hours}h${!isF ? `<br>📖 ${data.subject} — ${data.chapter}<br>📊 ${data.chapterStatus === 'completed' ? '✅ Chapter completed' : '📖 In Progress'}` : ''}`;
   window.scrollTo({top:0,behavior:'smooth'});
 }
 

@@ -628,7 +628,7 @@ function getRemark(c,s,i){const k=progKey(c,s,i);return progress[k]?progress[k].
 function barColor(p){return p>=80?'#16a34a':p>=40?'#d97706':'#2B7FE0';}
 function calcSubjPct(c,s){
   const chs=DATA[c][s].chapters;let tp=0,tu=0;
-  chs.forEach((ch,i)=>{tp+=ch.planned||1;tu+=Math.min(getUsed(c,s,i),ch.planned||1);});
+  chs.forEach((ch,i)=>{tp+=ch.planned||0;tu+=getUsed(c,s,i);});
   return tp>0?Math.round((tu/tp)*100):0;
 }
 function calcClassPct(c){
@@ -678,7 +678,7 @@ function renderSummary(){
     <div class="sum-card">
       <div class="sum-label">Still remaining</div>
       <div class="sum-val">${totalCh-doneCh}</div>
-      <div class="sum-sub">chapters to finish</div>
+      <div class="sum-sub">chapters remaining</div>
     </div>`;
 }
 
@@ -709,7 +709,7 @@ function renderChapters(){
   chs.forEach((ch,i)=>{
     const used=getUsed(activeClass,activeSubject,i);
     const planned=ch.planned||0;
-    const pct=planned>0?Math.min(100,Math.round((used/planned)*100)):(used>0?100:0);
+    const pct=planned>0?Math.round((used/planned)*100):(used>0?100:0);
     const col=barColor(pct);
     const rem=getRemark(activeClass,activeSubject,i);
     rows+=`<div>
@@ -718,7 +718,7 @@ function renderChapters(){
         <div class="ch-name">${ch.name}</div>
         <div class="ch-month">${ch.month}</div>
         <div class="ch-planned">${planned>0?planned:'—'}</div>
-        <div class="ch-used-wrap"><input type="number" min="0" max="${planned>0?planned*3:999}" value="${used}" id="used-${i}" onchange="updateUsed(${i},this.value)"></div>
+        <div class="ch-used-wrap"><input type="number" min="0" max="${planned>0?planned*3:999}" value="${used}" id="used-${i}" step="0.5" onchange="updateUsed(${i},this.value)"></div>
         <div class="ch-prog-wrap">
           <div class="ch-prog-bar"><div class="ch-prog-fill" id="pb-${i}" style="width:${pct}%;background:${col}"></div></div>
           <div class="ch-pct" id="pp-${i}">${pct}%</div>
@@ -739,8 +739,8 @@ function renderChapters(){
       <div class="col-h c">#</div>
       <div class="col-h">Chapter</div>
       <div class="col-h">Month</div>
-      <div class="col-h c">Planned</div>
-      <div class="col-h c">Used</div>
+      <div class="col-h c">Planned hrs</div>
+      <div class="col-h c">Actual hrs</div>
       <div class="col-h">Progress</div>
       <div class="col-h"></div>
     </div>${rows}</div>`;
@@ -752,7 +752,7 @@ function updateUsed(idx,val){
   progress[k].used=Math.max(0,parseInt(val)||0);
   const ch=DATA[activeClass][activeSubject].chapters[idx];
   const planned=ch.planned||0,used=progress[k].used;
-  const pct=planned>0?Math.min(100,Math.round((used/planned)*100)):(used>0?100:0);
+  const pct=planned>0?Math.round((used/planned)*100):(used>0?100:0);
   const col=barColor(pct);
   const pb=document.getElementById('pb-'+idx),pp=document.getElementById('pp-'+idx);
   if(pb){pb.style.width=pct+'%';pb.style.background=col;}
@@ -810,7 +810,7 @@ function renderAdminContent(){
     <div class="ch-edit-row">
       <input type="text" value="${escHtml(ch.name)}" onchange="adminData['${adminClass}']['${skey}'].chapters[${i}].name=this.value" placeholder="Chapter name">
       <input type="text" value="${escHtml(ch.month)}" onchange="adminData['${adminClass}']['${skey}'].chapters[${i}].month=this.value" placeholder="Month">
-      <input type="number" value="${ch.planned}" min="0" onchange="adminData['${adminClass}']['${skey}'].chapters[${i}].planned=parseInt(this.value)||0" placeholder="Periods">
+      <input type="number" value="${ch.planned}" min="0" step="0.5" onchange="adminData['${adminClass}']['${skey}'].chapters[${i}].planned=parseFloat(this.value)||0" placeholder="Periods">
       <button class="btn-sm danger" onclick="deleteChapter(${i})">Delete</button>
       <button class="del-btn" title="Move up" onclick="moveChapter(${i},-1)">↑</button>
     </div>`).join('');
@@ -821,7 +821,7 @@ function renderAdminContent(){
     </div>
     <div class="ch-edit-head">
       <div class="col-h">Chapter name</div><div class="col-h">Month</div>
-      <div class="col-h">Planned periods</div><div class="col-h"></div><div class="col-h"></div>
+      <div class="col-h">Planned hours</div><div class="col-h"></div><div class="col-h"></div>
     </div>
     ${rows}
     <div class="add-ch-row"><button class="btn-sm primary" onclick="addChapter()">+ Add chapter</button></div>
@@ -911,8 +911,8 @@ window._applyFirebaseSessions = function(sessions) {
     const batch = s.batch;
     const subject = s.subject;
     const chapter = s.chapter;
-    const periods = parseInt(s.periods) || 0;
-    if (!batch || !subject || !chapter || !periods) return;
+    const hours = parseFloat(s.hours) || 0;
+    if (!batch || !subject || !chapter || !hours) return;
 
     // Find chapter index in DATA
     if (!DATA[batch] || !DATA[batch][subject]) return;
@@ -922,7 +922,7 @@ window._applyFirebaseSessions = function(sessions) {
 
     const k = progKey(batch, subject, idx);
     if (!fbProgress[k]) fbProgress[k] = { used: 0, remark: '', status: '' };
-    fbProgress[k].used += periods;
+    fbProgress[k].used += hours;
     if (s.chapterStatus === 'completed') fbProgress[k].status = 'completed';
     if (s.description) fbProgress[k].remark = s.description;
   });
@@ -931,7 +931,7 @@ window._applyFirebaseSessions = function(sessions) {
   Object.entries(fbProgress).forEach(([k, v]) => {
     if (!progress[k]) progress[k] = {};
     // Take the higher value between manual entry and firebase sum
-    progress[k].used = Math.max(progress[k].used || 0, v.used);
+    progress[k].used = Math.max(parseFloat(progress[k].used) || 0, v.used);
     if (v.remark && !progress[k].remark) progress[k].remark = v.remark;
   });
 
@@ -1076,9 +1076,9 @@ function buildSalaryReport() {
 
 function exportSalaryCSV() {
   const sessions = getFilteredSessions();
-  const rows = [['Date','Faculty','Batch','Batch Type','Session','Hours','Subject','Chapter','Periods','Status','Description']];
+  const rows = [['Date','Faculty','Batch','Batch Type','Session','Hours','Subject','Chapter','Status','Description']];
   sessions.forEach(s => {
-    rows.push([s.date||'',s.faculty||'',s.batch||'',s.batchType||'',s.session||'',s.hours||'',s.subject||'',s.chapter||'',s.periods||'',s.chapterStatus||'','"'+(s.description||'').replace(/"/g,"''")+'"']);
+    rows.push([s.date||'',s.faculty||'',s.batch||'',s.batchType||'',s.session||'',s.hours||'',s.subject||'',s.chapter||'',s.chapterStatus||'','"'+(s.description||'').replace(/"/g,"''")+'"']);
   });
   const csv = rows.map(r => r.join(',')).join('\n');
   const blob = new Blob([csv], {type:'text/csv'});
