@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(awk NR>=277 && NR<=285 *)",
+      "Bash(awk NR>=286 && NR<=605 *)",
+      "Bash(awk 'NR>=134 && NR<=200' \"D:/Josh Sites/Tracker/Josh-tracker/form.html\")",
+      "Bash(awk 'NR>=199 && NR<=240' \"D:/Josh Sites/Tracker/Josh-tracker/index.html\")",
+      "Bash(awk 'NR>=241 && NR<=276' \"D:/Josh Sites/Tracker/Josh-tracker/index.html\")"
+    ]
+  }
+}
