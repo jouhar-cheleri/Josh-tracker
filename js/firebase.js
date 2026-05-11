@@ -4,6 +4,7 @@
 // the onSnapshot live listener that calls window._applyFirebaseSessions().
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js';
+import { initializeAppCheck, ReCaptchaV3Provider } from 'https://www.gstatic.com/firebasejs/12.13.0/firebase-app-check.js';
 import { getFirestore, collection, onSnapshot, query, orderBy } from 'https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js';
 
 const firebaseConfig = {
@@ -16,6 +17,10 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
+initializeAppCheck(app, {
+  provider: new ReCaptchaV3Provider('6LfImeQsAAAAAKWeHjz7iHDTfDz7w15dj3pGpE6R'),
+  isTokenAutoRefreshEnabled: true
+});
 const db = getFirestore(app);
 
 // Live listener — updates dashboard whenever a new session is submitted

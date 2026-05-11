@@ -3,6 +3,7 @@
 // so that classic (non-module) form.js scripts can use them.
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js';
+import { initializeAppCheck, ReCaptchaV3Provider } from 'https://www.gstatic.com/firebasejs/12.13.0/firebase-app-check.js';
 import { getFirestore, collection, addDoc, query, where, getDocs, serverTimestamp } from 'https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js';
 
 const firebaseConfig = {
@@ -16,6 +17,10 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
+initializeAppCheck(app, {
+  provider: new ReCaptchaV3Provider('6LfImeQsAAAAAKWeHjz7iHDTfDz7w15dj3pGpE6R'),
+  isTokenAutoRefreshEnabled: true
+});
 const db = getFirestore(app);
 
 // Expose as window globals for use by classic (non-module) scripts
