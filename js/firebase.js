@@ -5,7 +5,7 @@
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js';
 import { initializeAppCheck, ReCaptchaV3Provider } from 'https://www.gstatic.com/firebasejs/12.13.0/firebase-app-check.js';
-import { getFirestore, collection, onSnapshot, query, orderBy } from 'https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js';
+import { getFirestore, collection, onSnapshot, query, orderBy, doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js';
 
 const firebaseConfig = {
   apiKey: "AIzaSyC3j82YlH0cRxdsQU-2z5IuovewUrjbDFo",
@@ -36,3 +36,23 @@ onSnapshot(q, (snapshot) => {
 
 document.getElementById('fb-sync-status').textContent = '● Live — syncing from Firebase';
 document.getElementById('fb-sync-status').style.color = '#16a34a';
+
+// Load curriculum from Firestore once on startup
+const curriculumDoc = doc(db, 'curriculum', 'main');
+getDoc(curriculumDoc).then(snap => {
+  if (snap.exists() && snap.data().json) {
+    try {
+      const parsed = JSON.parse(snap.data().json);
+      if (window._onCurriculumLoaded) window._onCurriculumLoaded(parsed);
+    } catch(e) {}
+  }
+}).catch(() => {});
+
+// Called by admin.js after saving changes
+window._saveCurriculum = async function(data) {
+  try {
+    await setDoc(curriculumDoc, { json: JSON.stringify(data) });
+  } catch(e) {
+    console.error('Curriculum save failed:', e);
+  }
+};

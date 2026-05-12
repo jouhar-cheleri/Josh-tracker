@@ -218,3 +218,10 @@ function checkRoute() {
   }
 }
 window.addEventListener('hashchange', checkRoute);
+
+// Called by firebase.js when Firestore curriculum is loaded
+window._onCurriculumLoaded = function(data) {
+  DATA = data;
+  saveAll();
+  renderDash();
+};

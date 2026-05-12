@@ -105,7 +105,16 @@ function addSubject() {
   adminData[adminClass][name] = { chapters: [] }; adminSubject = name;
   renderAdminSubjTabs(); renderAdminContent();
 }
-function saveAdminChanges() { DATA = JSON.parse(JSON.stringify(adminData)); saveAll(); showToast('All changes saved ✓'); renderDash(); }
+function saveAdminChanges() {
+  DATA = JSON.parse(JSON.stringify(adminData));
+  saveAll();
+  if (window._saveCurriculum) {
+    window._saveCurriculum(DATA).then(() => showToast('Saved to cloud ✓')).catch(() => showToast('Saved locally ✓'));
+  } else {
+    showToast('All changes saved ✓');
+  }
+  renderDash();
+}
 function exportData() {
   const blob = new Blob([JSON.stringify({ curriculum: DATA, progress: progress }, null, 2)], { type: 'application/json' });
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
@@ -122,7 +131,9 @@ function importData() {
         if (parsed.curriculum) DATA = parsed.curriculum;
         if (parsed.progress) progress = parsed.progress;
         adminData = JSON.parse(JSON.stringify(DATA));
-        saveAll(); renderAdminSubjTabs(); renderAdminContent(); renderDash();
+        saveAll();
+        if (window._saveCurriculum) window._saveCurriculum(DATA);
+        renderAdminSubjTabs(); renderAdminContent(); renderDash();
         showToast('Data imported ✓');
       } catch(e) { alert('Invalid JSON file.'); }
     }; reader.readAsText(file);
