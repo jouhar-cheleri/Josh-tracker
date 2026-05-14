@@ -4,6 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Josh — Faculty Session Form 2026-27</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://www.gstatic.com">
+<link rel="preconnect" href="https://firestore.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=DM+Serif+Display:ital@0;1&display=swap">
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js">
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.13.0/firebase-app-check.js">
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js">
 <link rel="stylesheet" href="assets/css/shared.css">
 <link rel="stylesheet" href="assets/css/form.css">
 </head>
@@ -82,19 +90,8 @@
 
       <div class="field">
         <label>Class / Batch <span class="req">*</span></label>
-        <select id="f-batch" required onchange="onBatchChange()">
-          <option value="">— Select batch —</option>
-          <optgroup label="Kerala Syllabus">
-            <option value="8B1">8th Kerala Syllabus – B1</option>
-            <option value="9B1">9th Kerala Syllabus – B1</option>
-            <option value="10B1">10th Kerala Syllabus – B1</option>
-            <option value="10B2">10th Kerala Syllabus – B2</option>
-          </optgroup>
-          <optgroup label="Foundation">
-            <option value="FB1">Foundation B1 (10th)</option>
-            <option value="FB2">Foundation B2 (9th and 8th)</option>
-            <option value="FB3">Foundation B3 (10th B2 and Remaining)</option>
-          </optgroup>
+        <select id="f-batch" required onchange="onBatchChange()" disabled>
+          <option value="">Loading curriculum…</option>
         </select>
         <div class="err-msg" id="err-batch">Please select a batch</div>
       </div>
@@ -191,8 +188,7 @@
   </div><!-- /form-body -->
 </div><!-- /form-wrap -->
 
-<!-- Script loading order: data.js → form.js → firebase-form.js (module) -->
-<script src="js/data.js"></script>
+<!-- Script loading order: form.js → firebase-form.js (module, populates dropdowns from Firestore) -->
 <script src="js/form.js"></script>
 <script type="module" src="js/firebase-form.js"></script>
 

@@ -4,6 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Josh Center for Excellence — Chapter Progress Tracker 2025–26</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://www.gstatic.com">
+<link rel="preconnect" href="https://firestore.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=DM+Serif+Display:ital@0;1&display=swap">
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js">
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.13.0/firebase-app-check.js">
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js">
 <link rel="stylesheet" href="assets/css/shared.css">
 <link rel="stylesheet" href="assets/css/dashboard.css">
 </head>
@@ -146,8 +154,8 @@
 <!-- Script loading order: data.js → dashboard.js → admin.js → salary.js → init → firebase.js (module) -->
 <script src="js/data.js"></script>
 <script src="js/dashboard.js"></script>
-<script src="js/admin.js"></script>
-<script src="js/salary.js"></script>
+<script src="js/admin.js" defer></script>
+<script src="js/salary.js" defer></script>
 <script>loadAll(); renderDash(); checkRoute();</script>
 <script type="module" src="js/firebase.js"></script>
 

@@ -1,6 +1,9 @@
 // ── form.js — form handlers, validation, duplicate check, submit for form.html ──
-// Depends on: data.js (SUBJECTS, CHAPTERS)
+// SUBJECTS and CHAPTERS are populated from Firebase by firebase-form.js
 // Firebase globals (window._db, window._addDoc, etc.) are set by firebase-form.js
+
+var SUBJECTS = {};
+var CHAPTERS = {};
 
 // ── STATE ──
 let selHours = null;

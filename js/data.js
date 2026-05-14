@@ -332,7 +332,8 @@ const DEFAULT_DATA = {
 };
 
 // ── FORM SUBJECTS & CHAPTERS (used by form.html) ──
-const SUBJECTS = {
+// var (not const) so firebase-form.js can override via window.SUBJECTS / window.CHAPTERS
+var SUBJECTS = {
   "8B1":  ["English","Mathematics","Basic Science","Social Science"],
   "9B1":  ["English","Mathematics","Physics","Chemistry","Biology","Social Science I","Social Science II"],
   "10B1": ["English","Mathematics","Physics","Chemistry","Biology","Social Science I","Social Science II"],
@@ -342,7 +343,7 @@ const SUBJECTS = {
   "FB3":  ["Foundation - English","Foundation - Maths","Foundation - Hindi"]
 };
 
-const CHAPTERS = {
+var CHAPTERS = {
   "8B1":{
     "English":["A Long Walk With Granny","The Seven Ages of Man","Little Things Matter","Hope is the Thing with Feathers","A Prescription for Life","The Day My World Changed","Talking of Science","Engine Trouble","The Astronomer","Get Together","A Tryst with Destiny","Thank You Ma'am","A Tale of Two Gifts","Caged Bird","Village of the Watermills"],
     "Mathematics":["Squares","Congruent Triangles","Quadratic Equations","Polygons","Solving Equations","New Numbers","Statistics/Divisors","Ratio/Proportion","Circles","Decimal Forms","Parallelograms","Prisms","Statistics"],

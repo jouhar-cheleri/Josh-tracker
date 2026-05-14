@@ -24,7 +24,19 @@ function showToast(msg) {
 function progKey(c, s, i) { return c + '__' + s + '__' + i; }
 function getUsed(c, s, i) { const k = progKey(c, s, i); return progress[k] ? progress[k].used || 0 : 0; }
 function getRemark(c, s, i) { const k = progKey(c, s, i); return progress[k] ? progress[k].remark || '' : ''; }
+function getStatus(c, s, i) { const k = progKey(c, s, i); return progress[k] ? progress[k].status || '' : ''; }
+function isChapterDone(c, s, i) {
+  if (getStatus(c, s, i) === 'completed') return true;
+  const ch = DATA[c][s].chapters[i]; const u = getUsed(c, s, i);
+  return ch.planned > 0 ? u >= ch.planned : u > 0;
+}
 function barColor(p) { return p >= 80 ? '#16a34a' : p >= 40 ? '#d97706' : '#2B7FE0'; }
+function overrunColor(used) { return used > 6 ? '#dc2626' : used > 4 ? '#d97706' : null; }
+function subjOverrun(c, s) {
+  let red = false, amber = false;
+  DATA[c][s].chapters.forEach((ch, i) => { const u = getUsed(c, s, i); if (u > 6) red = true; else if (u > 4) amber = true; });
+  return red ? 'red' : amber ? 'amber' : null;
+}
 function calcSubjPct(c, s) {
   const chs = DATA[c][s].chapters; let tp = 0, tu = 0;
   chs.forEach((ch, i) => { tp += ch.planned || 0; tu += getUsed(c, s, i); });
@@ -53,11 +65,9 @@ function renderHero() {
 function renderSummary() {
   const c = activeClass, ss = Object.keys(DATA[c] || {});
   const pct = calcClassPct(c);
-  const done = ss.filter(s => calcSubjPct(c, s) === 100).length;
   const totalCh = ss.reduce((a, s) => a + DATA[c][s].chapters.length, 0);
-  const doneCh = ss.reduce((a, s) => a + DATA[c][s].chapters.filter((ch, i) => {
-    const u = getUsed(c, s, i); return ch.planned > 0 ? u >= ch.planned : u > 0;
-  }).length, 0);
+  const doneCh = ss.reduce((a, s) => a + DATA[c][s].chapters.filter((ch, i) => getStatus(c, s, i) === 'completed').length, 0);
+  const done = ss.filter(s => DATA[c][s].chapters.every((ch, i) => getStatus(c, s, i) === 'completed')).length;
   document.getElementById('summary-row').innerHTML = `
     <div class="sum-card">
       <div class="sum-label">Overall progress</div>
@@ -85,7 +95,8 @@ function renderSubjects() {
   const c = activeClass, ss = Object.keys(DATA[c] || {});
   document.getElementById('subj-grid').innerHTML = ss.map(s => {
     const pct = calcSubjPct(c, s), col = barColor(pct);
-    return `<div class="subj-card${activeSubject === s ? ' active' : ''}" onclick="selectSubject('${s.replace(/'/g, "\\'")}')">
+    const or = subjOverrun(c, s);
+    return `<div class="subj-card${activeSubject === s ? ' active' : ''}${or === 'red' ? ' subj-overrun-red' : or === 'amber' ? ' subj-overrun-amber' : ''}" onclick="selectSubject('${s.replace(/'/g, "\\'")}')">
       <div class="subj-icon">${subjIcon(s)}</div>
       <div class="subj-name">${s}</div>
       <div class="subj-meta">${DATA[c][s].chapters.length} chapters</div>
@@ -109,12 +120,13 @@ function renderChapters() {
     const used = getUsed(activeClass, activeSubject, i);
     const planned = ch.planned || 0;
     const pct = planned > 0 ? Math.round((used / planned) * 100) : (used > 0 ? 100 : 0);
-    const col = barColor(pct);
+    const done = isChapterDone(activeClass, activeSubject, i);
+    const col = overrunColor(used) || (done ? '#16a34a' : barColor(pct));
     const rem = getRemark(activeClass, activeSubject, i);
     rows += `<div>
-      <div class="ch-row">
+      <div class="ch-row${done ? ' ch-row-done' : ''}">
         <div class="ch-num">${i + 1}</div>
-        <div class="ch-name">${ch.name}</div>
+        <div class="ch-name">${ch.name}${done ? '<span class="ch-done-badge">✓ Done</span>' : ''}</div>
         <div class="ch-month">${ch.month}</div>
         <div class="ch-planned">${planned > 0 ? planned : '—'}</div>
         <div class="ch-used-wrap"><input type="number" min="0" max="${planned > 0 ? planned * 3 : 999}" value="${used}" id="used-${i}" step="0.5" onchange="updateUsed(${i},this.value)"></div>
@@ -152,7 +164,7 @@ function updateUsed(idx, val) {
   const ch = DATA[activeClass][activeSubject].chapters[idx];
   const planned = ch.planned || 0, used = progress[k].used;
   const pct = planned > 0 ? Math.round((used / planned) * 100) : (used > 0 ? 100 : 0);
-  const col = barColor(pct);
+  const col = overrunColor(used) || (isChapterDone(activeClass, activeSubject, idx) ? '#16a34a' : barColor(pct));
   const pb = document.getElementById('pb-' + idx), pp = document.getElementById('pp-' + idx);
   if (pb) { pb.style.width = pct + '%'; pb.style.background = col; }
   if (pp) pp.textContent = pct + '%';
@@ -196,6 +208,7 @@ window._applyFirebaseSessions = function(sessions) {
   Object.entries(fbProgress).forEach(([k, v]) => {
     if (!progress[k]) progress[k] = {};
     progress[k].used = Math.max(parseFloat(progress[k].used) || 0, v.used);
+    if (v.status === 'completed') progress[k].status = 'completed';
     if (v.remark && !progress[k].remark) progress[k].remark = v.remark;
   });
 
