@@ -119,9 +119,10 @@ function renderChapters() {
   chs.forEach((ch, i) => {
     const used = getUsed(activeClass, activeSubject, i);
     const planned = ch.planned || 0;
-    const pct = planned > 0 ? Math.round((used / planned) * 100) : (used > 0 ? 100 : 0);
+    const rawPct = planned > 0 ? Math.round((used / planned) * 100) : (used > 0 ? 100 : 0);
     const done = isChapterDone(activeClass, activeSubject, i);
-    const col = overrunColor(used) || (done ? '#16a34a' : barColor(pct));
+    const pct = done ? 100 : rawPct;
+    const col = done ? '#16a34a' : (overrunColor(used) || barColor(rawPct));
     const rem = getRemark(activeClass, activeSubject, i);
     rows += `<div>
       <div class="ch-row${done ? ' ch-row-done' : ''}">
@@ -163,8 +164,10 @@ function updateUsed(idx, val) {
   progress[k].used = Math.max(0, parseFloat(val) || 0);
   const ch = DATA[activeClass][activeSubject].chapters[idx];
   const planned = ch.planned || 0, used = progress[k].used;
-  const pct = planned > 0 ? Math.round((used / planned) * 100) : (used > 0 ? 100 : 0);
-  const col = overrunColor(used) || (isChapterDone(activeClass, activeSubject, idx) ? '#16a34a' : barColor(pct));
+  const rawPct = planned > 0 ? Math.round((used / planned) * 100) : (used > 0 ? 100 : 0);
+  const done = isChapterDone(activeClass, activeSubject, idx);
+  const pct = done ? 100 : rawPct;
+  const col = done ? '#16a34a' : (overrunColor(used) || barColor(rawPct));
   const pb = document.getElementById('pb-' + idx), pp = document.getElementById('pp-' + idx);
   if (pb) { pb.style.width = pct + '%'; pb.style.background = col; }
   if (pp) pp.textContent = pct + '%';
